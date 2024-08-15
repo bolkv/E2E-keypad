@@ -1,23 +1,33 @@
 package bob.e2e.domain.service
 
-import bob.e2e.domain.keypad.Hash
+
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Service
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.util.Base64
+import java.time.Instant
+import java.util.*
 import javax.imageio.ImageIO
 
 @Service
 class KeypadService( ) {
 
-    private val hash : Map<String,String> = Hash().getHash()
+
+    private lateinit var hash : Map<String,String>
     private val index : MutableList<Int> = (0..11).toMutableList()
     private lateinit var index_hash : MutableList<String>
     private lateinit var imagePaths : MutableList<String>
     private var cachedImage: BufferedImage? = null
+
+    fun makeHash() {
+        hash = (0..10).associate {
+            val uuid = UUID.randomUUID().toString()
+            val timestamp = Instant.now().toEpochMilli().toString()
+            it.toString() to "$uuid-$timestamp"
+        }
+    }
 
     fun shuffle(){
         index_hash = mutableListOf()

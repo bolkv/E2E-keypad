@@ -18,6 +18,7 @@ class KeypadController(private val keypadService: KeypadService) {
 
     @GetMapping("/keypad")
     fun getKeypad(response: HttpServletResponse): KeypadResponseDto {
+        keypadService.makeHash()
         keypadService.shuffle()
         val (base64Image, hashes) = keypadService.getKeypadData()
         return KeypadResponseDto(image = base64Image, hashes = hashes)
