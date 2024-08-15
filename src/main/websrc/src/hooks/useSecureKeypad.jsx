@@ -13,7 +13,10 @@ export default function useSecureKeypad() {
     useEffect(() => {
         // 6자리 입력이 완료되면 자동으로 백엔드에 전송
         if (userInput.length === 6) {
-            postInput(userInput.join(','));
+            const inputString = userInput.join(',');
+            alert(`${inputString}`);
+
+            postInput(inputString);
             // 입력 후 키패드를 새로고침
             refreshKeypad();
             // 입력을 초기화
