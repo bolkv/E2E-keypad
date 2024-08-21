@@ -7,6 +7,7 @@ import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.security.MessageDigest
 import java.time.Instant
 import java.util.*
 import javax.imageio.ImageIO
@@ -15,35 +16,35 @@ import javax.imageio.ImageIO
 class KeypadService( ) {
 
 
-    private lateinit var hash : Map<String,String>
+    private lateinit var keypadhash : String
+    private lateinit var keyhash: Map<String,String>
     private val index : MutableList<Int> = (0..11).toMutableList()
     private lateinit var index_hash : MutableList<String>
     private lateinit var imagePaths : MutableList<String>
     private var cachedImage: BufferedImage? = null
+    val uuid = UUID.randomUUID().toString()
+    val timestamp = Instant.now().toEpochMilli().toString()
+    val secretkey = "bob"
 
-    fun makeHash() {
-        hash = (0..10).associate {
-            val uuid = UUID.randomUUID().toString()
-            val timestamp = Instant.now().toEpochMilli().toString()
-            it.toString() to "$uuid-$timestamp"
-        }
+    fun getKeyHash():Map<String,String>{
+        return keyhash
     }
 
-    fun shuffle(){
-        index_hash = mutableListOf()
-        imagePaths = mutableListOf()
+    fun doHash(text: String): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(text.toByteArray())
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
 
-        for(i in  index.shuffled()){
-            if( i == 10 || i==11) {
-                index_hash.add(hash["10"].toString())
-                imagePaths.add("/keypad/_blank.png")
-            }
-            else {
-                hash[i.toString()]?.let { index_hash.add(it) }
-                imagePaths.add("/keypad/_${i}.png")
-            }
+    fun makeHash(uuid: String, timestamp: String): String {
+        val hashInput = "$uuid-$timestamp-$secretkey"
+        keypadhash = doHash(hashInput)
 
+            keyhash = (0..9).associate{ number ->
+            val hash = doHash(number.toString())
+            number.toString() to hash
         }
+        return keypadhash
     }
 
     fun createImage(rows: Int, cols: Int): BufferedImage {
@@ -83,11 +84,59 @@ class KeypadService( ) {
         }
     }
 
-    fun getKeypadData(): Pair<String, List<String>> {
-        // base64 이미지와 해시 값을 반환
+    fun getPublicKey(): String {
+        return try {
+            val resource = ClassPathResource("/publicKey/public_key.pem")
+            resource.inputStream.bufferedReader().use { it.readText() }
+        } catch (e: IOException) {
+            throw RuntimeException("Failed to load public key", e)
+        }
+    }
+
+    fun getKeypadData():  Map<String, Any> {
+        keypadhash = makeHash(this.uuid, this.timestamp)
+        shuffle()
+        val publicKey = getPublicKey()
+
         val image = createImage(3, 4)
         val base64Image = convertToBase64(image)
-        return base64Image to index_hash
+
+
+        return mapOf(
+        "uuid" to uuid,
+        "timestamp" to timestamp,
+        "keypadhash" to keypadhash,
+        "image" to base64Image,
+        "index_hash" to index_hash,
+        "publicKey" to  publicKey
+        )
+    }
+
+    fun shuffle(){
+        index_hash = mutableListOf()
+        imagePaths = mutableListOf()
+
+        for(i in  index.shuffled()){
+            if( i == 10 || i==11) {
+                index_hash.add("")
+                imagePaths.add("/keypad/_blank.png")
+            }
+            else {
+                keyhash[i.toString()]?.let { index_hash.add(it) }
+                imagePaths.add("/keypad/_${i}.png")
+            }
+
+        }
+    }
+
+
+    fun checkIntegrity(uuid:String, timestamp:String, keypadhash:String): Boolean{
+        val checkHash : String = makeHash(uuid, timestamp)
+        if(checkHash == keypadhash){
+            return true
+        }
+
+        else return false
     }
 
 
