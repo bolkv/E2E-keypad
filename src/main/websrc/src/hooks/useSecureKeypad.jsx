@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import JSEncrypt from 'jsencrypt';
 
@@ -9,55 +9,63 @@ export default function useSecureKeypad() {
     const [uuid, setUuid] = useState('');
     const [keypadhash, setKeypadhash] = useState('');
     const [timestamp, setTimestamp] = useState('');
-    const [publicKey,setPublicKey] = useState('');
-
-    const refreshKeypad = useCallback(() => {
-        getSecureKeypad();
-    }, []);
-
+    const [shuffledIndex, setShuffledIndex] = useState([]);  // 섞인 index 배열
+    const publicKey = "-----BEGIN PUBLIC KEY-----\n" +
+        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtkLA7dcyLqz4M6BS/XZi\n" +
+        "wMee85fjwskmxfZVN/qI854Sa4mlU/5Rse0HcNY0QoF+J3kQF3xWpTKLfw2p5pzt\n" +
+        "sALLN6gsO2m4qLIOk3eNR+hVL2Rh4dc8MAhuXfoTGrfMjXouiy05rYgVpqIRRCjz\n" +
+        "MVGYnJ7arZ6rMN73nRxd0I9RVbe3LXEuHrBysxjfXae6z+qb+1Rp9MKnwiDuKC/i\n" +
+        "2lqqqmV9p/8OuY+qUzsMCtU8URS8kvw/bkg90TEOHzjKWrRIYRcQQkdJ8KuX3/lV\n" +
+        "1jBBgIQRfmQVTFUnkV5XBZw9jXYTsz6Bcp4MNWUlwHQIebAM8vMZ6/nH9p4OdETA\n" +
+        "5wIDAQAB\n" +
+        "-----END PUBLIC KEY-----\n"
 
     useEffect(() => {
         if (userInput.length === 6) {
-            const inputString = userInput.join(',');
-            alert(`입력된 값: ${inputString}`);
+            const inputString = userInput.join('');
+            const encryptedString = encryptData(inputString);
 
-            const encryptedInputs = userInput.map(input => encryptData(input));
+            if (encryptedString) {
+                const requestData = {
+                    uuid: uuid,
+                    timestamp: timestamp,
+                    keypadhash: keypadhash,
+                    input: encryptedString // input 필드에 암호화된 문자열을 할당
+                };
 
-            // 암호화된 값들을 ','로 연결
-            const encryptedString = encryptedInputs.join(',');
-            postInput({ uuid,timestamp, keypadhash, input: encryptedString });
-            setUserInput([]);
-            refreshKeypad();
-
+                postInput(requestData).then(() => {
+                    setUserInput([]);  // 입력 초기화
+                    window.location.reload();  // 서버 응답 후 페이지 새로고침
+                });
+            }
         }
     }, [userInput]);
 
-    const getSecureKeypad = () => {
-        return axios.get('http://localhost:8080/api/keypad')
+    const getSecureKeypad = async () => {
+        return await axios.get('http://localhost:8080/api/keypad')
             .then(response => {
-                const { image, uuid, timestamp, hashes, keypadhash,publicKey } = response.data;
+                const { image, uuid, timestamp, hashes, keypadhash, shuffledIndex } = response.data;
+                console.log("Fetched Keypad Data:", response.data); // 셔플된 데이터를 확인
                 setKeypad(image);
                 setHashes(hashes);
                 setUuid(uuid);
-                setTimestamp(timestamp)
+                setTimestamp(timestamp);
                 setKeypadhash(keypadhash);
-                setPublicKey(publicKey);
-
-             })
+                setShuffledIndex(shuffledIndex);
+            })
             .catch(error => {
                 console.error('Error fetching keypad image:', error);
                 throw error;
             });
     };
 
-    const postInput = (data) => {
-        axios.post('http://localhost:8080/api/input', data)
-            .then(response => {
-                console.log('Input saved successfully:', response.data);
-            })
-            .catch(error => {
-                console.error('Error saving input:', error);
-            });
+    const postInput = async (data) => {
+        try {
+            const response = await axios.post('http://localhost:8080/api/input', data);
+            alert(`서버 응답: ${response.data}`);
+        } catch (error) {
+            console.error('Error saving input:', error);
+        }
     };
 
     const onKeyPressed = (index) => {

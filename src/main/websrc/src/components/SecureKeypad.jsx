@@ -2,14 +2,7 @@ import '../style/keypad.css';
 import useSecureKeypad from "@/hooks/useSecureKeypad.jsx";
 import { useEffect } from 'react';
 
-export default function SecureKeypad({ onKeyPressed }) {
-    const { states: { keypad }, actions: { getSecureKeypad } } = useSecureKeypad();
-    console.log("SecureKeypad component rendered");
-    useEffect(() => {
-        console.log("useEffect triggered");
-        getSecureKeypad();  // 컴포넌트가 처음 렌더링될 때 키패드 이미지를 가져옵니다.
-    }, [getSecureKeypad]);
-
+export default function SecureKeypad({ keypad, onKeyPressed }) {
     const positions = [
         { x: 0, y: 0 }, { x: -50, y: 0 }, { x: -100, y: 0 }, { x: -150, y: 0 },
         { x: 0, y: -50 }, { x: -50, y: -50 }, { x: -100, y: -50 }, { x: -150, y: -50 },

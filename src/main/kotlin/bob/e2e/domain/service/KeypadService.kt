@@ -30,11 +30,11 @@ class KeypadService( ) {
         return keyhash
     }
 
-    fun doHash(text: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(text.toByteArray())
-        return hashBytes.joinToString("") { "%02x".format(it) }
-    }
+    fun doHash(text: String) = MessageDigest.getInstance("SHA-256")
+        .digest(text.toByteArray())
+        .joinToString("") { "%02x".format(it) }
+        .take(16)
+
 
     fun makeHash(uuid: String, timestamp: String): String {
         val hashInput = "$uuid-$timestamp-$secretkey"
@@ -48,10 +48,9 @@ class KeypadService( ) {
     }
 
     fun createImage(rows: Int, cols: Int): BufferedImage {
-        if (cachedImage != null) {
-            return cachedImage!!
-        }
-        val images = imagePaths.map { getImageFromClassPath(it)}
+        cachedImage = null // 매번 새로운 이미지를 생성할 때 cachedImage를 초기화
+
+        val images = imagePaths.map { getImageFromClassPath(it) }
         val width = images[0].width
         val height = images[0].height
         val combinedImage = BufferedImage(width * cols, height * rows, BufferedImage.TYPE_INT_ARGB)
@@ -64,7 +63,7 @@ class KeypadService( ) {
         }
 
         g.dispose()
-        cachedImage = combinedImage // 이미지를 캐시에 저장
+        cachedImage = combinedImage // 새로 생성된 이미지를 캐시에 저장
         return combinedImage
     }
 
@@ -96,11 +95,10 @@ class KeypadService( ) {
     fun getKeypadData():  Map<String, Any> {
         keypadhash = makeHash(this.uuid, this.timestamp)
         shuffle()
-        val publicKey = getPublicKey()
+        //val publicKey = getPublicKey()
 
         val image = createImage(3, 4)
         val base64Image = convertToBase64(image)
-
 
         return mapOf(
         "uuid" to uuid,
@@ -108,15 +106,17 @@ class KeypadService( ) {
         "keypadhash" to keypadhash,
         "image" to base64Image,
         "index_hash" to index_hash,
-        "publicKey" to  publicKey
+        "shuffledIndex" to index,
+
         )
     }
 
     fun shuffle(){
         index_hash = mutableListOf()
         imagePaths = mutableListOf()
+        index.shuffle()
 
-        for(i in  index.shuffled()){
+        for(i in index ){
             if( i == 10 || i==11) {
                 index_hash.add("")
                 imagePaths.add("/keypad/_blank.png")
@@ -127,6 +127,9 @@ class KeypadService( ) {
             }
 
         }
+
+        println(index)
+        println(index_hash)
     }
 
 

@@ -6,5 +6,5 @@ data class KeypadResponseDto(
     val uuid: String,
     val hashes: List<String>,
     val keypadhash: String,
-    val publicKey:String,
+    val shuffledIndex:  MutableList<Int>,
 )

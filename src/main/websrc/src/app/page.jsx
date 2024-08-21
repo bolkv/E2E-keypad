@@ -9,7 +9,8 @@ export default function Page() {
   const { states, actions } = useSecureKeypad();
 
     useEffect(() => {
-        actions.getSecureKeypad();  // API 호출을 통해 키패드 이미지를 가져옵니다.
+        actions.getSecureKeypad();
+        console.log(1);
     }, []);
 
 
